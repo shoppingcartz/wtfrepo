@@ -261,7 +261,7 @@ xpcall(function()
             print('[status] Preparing Translations')
             loader:setStatus("Preparing Translations")
             translations = safehttpget("https://raw.githubusercontent.com/aibabylaugh/catsaken/refs/heads/main/translations.lua", true)
-            if translations then translations = loadstring(translations)() else set_unloaded(true); return errorcore("Translations failed to load") end
+            if translations then translations = loadstring(translations)() else getgenv().gayyyTable.Unloaded=true; return errorcore("Translations failed to load") end
             local loaded = 0
             print('[status] Downloading Icons')
             loader:setStatus("Downloading Icons")
@@ -317,7 +317,7 @@ xpcall(function()
     end
     if ShouldUseOldUI then
         translations = safehttpget("https://raw.githubusercontent.com/aibabylaugh/catsaken/refs/heads/main/translations.lua", true)
-        if translations then translations = loadstring(translations)() else set_unloaded(true); return errorcore("Translations failed to load") end
+        if translations then translations = loadstring(translations)() else getgenv().gayyyTable.Unloaded=true; return errorcore("Translations failed to load") end
     end
     warn("translations init")
     repeat wait() until LOADSTEP3
