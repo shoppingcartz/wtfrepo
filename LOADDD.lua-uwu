@@ -1,0 +1,328 @@
+xpcall(function()
+    function downloadIcons(f)
+        local downloaded = 0
+        local todownload = {
+            'wifi.png',
+            'wifi-off.png',
+            'shield.png',
+            'ghost.png',
+            'app-window.png'
+        }
+        for i, v in pairs(todownload) do
+            if not isfile('Catsaken/' .. v) then
+                local suc, data = pcall(function()
+                    return safehttpget('https://github.com/aibabylaugh/catsaken/raw/main/' .. v, true)
+                end)
+                if not suc then
+                    warn("cannot download img", v, tostring(data))
+                else
+                    if CHANGELOADSTATE then
+                        CHANGELOADSTATE('Downloading Icons (' .. downloaded .. '/' .. #todownload .. ')')
+                    end
+                    print('writing image:', v, data)
+                    writefile('Catsaken/' .. v, data)
+                    if f then
+                        table.insert(f, getcustomasset('Catsaken/' .. v))
+                    end
+                end
+            else
+                print('the image', v, 'already exists')
+            end
+            downloaded = downloaded + 1
+        end
+    end
+    if not ShouldUseOldUI then
+        task.spawn(function()
+            local LoadingScreen = (function()
+                local Players = game:GetService("Players")
+                local RunService = game:GetService("RunService")
+                local TweenService = game:GetService("TweenService")
+
+                local BG = Color3.fromRGB(33, 33, 33)
+                local STROKE = Color3.fromRGB(60, 60, 60)
+                local TRACK = Color3.fromRGB(55, 55, 55)
+                local ACCENT = Color3.fromRGB(255, 182, 46)
+                local SUBTEXT = Color3.fromRGB(170, 170, 170)
+                local TEXT = Color3.fromRGB(235, 235, 235)
+                local TITLE = "Catsaken"
+                local SPOKES = 13
+
+                local Loader = {}
+                Loader.__index = Loader
+
+                local function make(class, props, parent)
+                    local inst = Instance.new(class)
+                    for k, v in pairs(props) do
+                        inst[k] = v
+                    end
+                    inst.Parent = parent
+                    return inst
+                end
+
+                local function transition(self, show)
+                    local dir = show and Enum.EasingDirection.Out or Enum.EasingDirection.In
+                    local info = TweenInfo.new(0.3, Enum.EasingStyle.Quad, dir)
+                    local t = show and 0 or 1
+                    TweenService:Create(self._content, info, { GroupTransparency = t }):Play()
+                    TweenService:Create(self._card, info, { BackgroundTransparency = t }):Play()
+                    TweenService:Create(self._stroke, info, { Transparency = t }):Play()
+                    local s = TweenService:Create(self._scale, info, { Scale = show and 1 or 0.9 })
+                    s:Play()
+                    return s
+                end
+
+                function Loader.new(parent)
+                    local self = setmetatable({}, Loader)
+
+                    local card = make("Frame", {
+                        AnchorPoint = Vector2.new(0.5, 0.5),
+                        Position = UDim2.fromScale(0.5, 0.5),
+                        Size = UDim2.fromOffset(340, 116),
+                        BackgroundColor3 = BG,
+                        BackgroundTransparency = 1,
+                        BorderSizePixel = 0,
+                    })
+                    make("UIDragDetector", {}, card)
+                    make("UICorner", { CornerRadius = UDim.new(0, 14) }, card)
+                    local stroke = make("UIStroke", { Color = STROKE, Thickness = 1, Transparency = 1 }, card)
+                    local scale = make("UIScale", { Scale = 0.9 }, card)
+
+                    local content = make("CanvasGroup", {
+                        Size = UDim2.fromScale(1, 1),
+                        BackgroundTransparency = 1,
+                        GroupTransparency = 1,
+                    }, card)
+
+                    local spinner = make("Frame", {
+                        AnchorPoint = Vector2.new(1, 0),
+                        Position = UDim2.new(1, -24, 0, 16),
+                        Size = UDim2.fromOffset(34, 34),
+                        BackgroundTransparency = 1,
+                    }, content)
+                    local spokes = {}
+                    for i = 1, SPOKES do
+                        local a = (i - 1) / SPOKES * math.pi * 2 - math.pi / 2
+                        local spoke = make("Frame", {
+                            AnchorPoint = Vector2.new(0.5, 0.5),
+                            Position = UDim2.fromScale(0.5 + math.cos(a) * 0.385, 0.5 + math.sin(a) * 0.385),
+                            Size = UDim2.fromOffset(5, 5),
+                            BackgroundColor3 = ACCENT,
+                            BorderSizePixel = 0,
+                        }, spinner)
+                        make("UICorner", { CornerRadius = UDim.new(1, 0) }, spoke)
+                        spokes[i] = spoke
+                    end
+
+                    make("TextLabel", {
+                        Position = UDim2.fromOffset(24, 16),
+                        Size = UDim2.new(1, -90, 0, 34),
+                        BackgroundTransparency = 1,
+                        Font = Enum.Font.GothamBold,
+                        Text = TITLE,
+                        TextColor3 = TEXT,
+                        TextSize = 22,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
+                    }, content)
+
+                    local status = make("TextLabel", {
+                        Position = UDim2.fromOffset(24, 56),
+                        Size = UDim2.new(1, -110, 0, 22),
+                        BackgroundTransparency = 1,
+                        Font = Enum.Font.GothamMedium,
+                        Text = "Loading...",
+                        TextColor3 = SUBTEXT,
+                        TextSize = 15,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
+                    }, content)
+
+                    local percent = make("TextLabel", {
+                        AnchorPoint = Vector2.new(1, 0),
+                        Position = UDim2.new(1, -24, 0, 56),
+                        Size = UDim2.fromOffset(56, 22),
+                        BackgroundTransparency = 1,
+                        Font = Enum.Font.GothamBold,
+                        Text = "0%",
+                        TextColor3 = TEXT,
+                        TextSize = 15,
+                        TextXAlignment = Enum.TextXAlignment.Right,
+                    }, content)
+
+                    local track = make("Frame", {
+                        Position = UDim2.fromOffset(24, 88),
+                        Size = UDim2.new(1, -48, 0, 8),
+                        BackgroundColor3 = TRACK,
+                        BorderSizePixel = 0,
+                    }, content)
+                    make("UICorner", { CornerRadius = UDim.new(1, 0) }, track)
+
+                    local fill = make("Frame", {
+                        Size = UDim2.fromScale(0, 1),
+                        BackgroundColor3 = ACCENT,
+                        BorderSizePixel = 0,
+                    }, track)
+                    make("UICorner", { CornerRadius = UDim.new(1, 0) }, fill)
+
+                    local root = make("ScreenGui", {
+                        Name = "LoadingScreen",
+                        IgnoreGuiInset = true,
+                        ResetOnSpawn = false,
+                        DisplayOrder = 999,
+                        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+                    })
+                    card.Parent = root
+                    root.Parent = parent or (gethui and gethui()) or Players.LocalPlayer:WaitForChild("PlayerGui")
+
+                    self._root = root
+                    self._card = card
+                    self._stroke = stroke
+                    self._scale = scale
+                    self._content = content
+                    self._status = status
+                    self._target = 0
+                    self._shown = 0
+                    self._done = false
+
+                    self._conn = RunService.Heartbeat:Connect(function(dt)
+                        local head = (os.clock() * 10) % SPOKES -- spin speed
+                        for i, spoke in ipairs(spokes) do
+                            spoke.BackgroundTransparency = (((head - i) % SPOKES) / SPOKES) * 0.85
+                        end
+
+                        self._shown = self._shown + (self._target - self._shown) * math.min(1, dt * 8)
+                        fill.Size = UDim2.fromScale(self._shown / 100, 1)
+                        percent.Text = math.floor(self._shown + 0.5) .. "%"
+                    end)
+
+                    transition(self, true)
+                    return self
+                end
+
+
+                function Loader:setProgress(percent, statusText)
+                    if self._done then
+                        return
+                    end
+                    self._target = math.clamp(percent, 0, 100)
+                    if statusText then
+                        self._status.Text = statusText
+                    end
+                end
+
+                function Loader:setStatus(text)
+                    if self._done then
+                        return
+                    end
+                    self._status.Text = text
+                end
+
+                function Loader:finished()
+                    if self._done then
+                        return
+                    end
+                    self._done = true
+                    self._target = 100
+
+                    while self._shown < 99.5 and self._root.Parent do
+                        wait()
+                    end
+                    self._shown = 100
+                    wait(0.25)
+                    if not self._root.Parent then
+                        return
+                    end
+
+                    transition(self, false)
+                    wait(0.3)
+                    self:destroy()
+                end
+
+                function Loader:destroy()
+                    self._done = true
+                    self._conn:Disconnect()
+                    self._root:Destroy()
+                end
+
+                return Loader
+            end)()
+
+            local loader
+            loader = LoadingScreen.new()
+
+            function QUITLOADING()
+                loader:destroy()
+                getgenv().catsakenexecuted = false
+            end
+
+            function CHANGELOADSTATE(n)
+                loader:setStatus(n)
+            end
+            print('[status] Preparing Translations')
+            loader:setStatus("Preparing Translations")
+            translations = safehttpget("https://raw.githubusercontent.com/aibabylaugh/catsaken/refs/heads/main/translations.lua", true)
+            if translations then translations = loadstring(translations)() else Unloaded = true; return errorcore("Translations failed to load") end
+            local loaded = 0
+            print('[status] Downloading Icons')
+            loader:setStatus("Downloading Icons")
+            local f = {}
+            downloadIcons(f)
+            LOADSTEP3 = true
+            print('[status] Initiating')
+            local startsinceinit = tick()
+            repeat
+                if getgenv().LOADING_ERROR then return end
+                CHANGELOADSTATE(string.format('Initiating (%.1fs)', tick() - startsinceinit))
+                wait()
+            until LOADSTEP2
+            local k = _G.globaluilibrary:GetDescendants()
+            for i = 1, #k do
+                if k[i]:IsA("ImageLabel") or k[i]:IsA("ImageButton") then
+                    f[#f+1] = k[i].Image
+                end
+            end
+            print('[status] Preparing UI')
+            CHANGELOADSTATE("Preparing UI (0/" .. #f .. ")")
+            local loadedimgs = {}
+            task.spawn(function()
+                for i = 1, #f do
+                    if loadedimgs[f[i]] then
+                        loaded = loaded + 1
+                        continue
+                    end
+                    local done = false
+                    task.spawn(function()
+                        pcall(ContentProvider.PreloadAsync, ContentProvider, {f[i]})
+                        done = true
+                    end)
+                    local t = tick()
+                    repeat wait() until done or tick() - t > 2
+                    loaded = loaded + 1
+                    loadedimgs[f[i]] = true
+                end
+            end)
+            while wait() do
+                CHANGELOADSTATE("Preparing UI (" .. loaded .. "/" .. #f .. ")")
+                loader:setProgress(#f == 0 and 100 or loaded / #f * 100)
+                if loaded == #f then
+                    break
+                end
+            end
+            loader:finished()
+            READYTOSHOWUI = true
+        end)
+    else
+        print('skipping loader, using old gui')
+        downloadIcons()
+    end
+    if ShouldUseOldUI then
+        translations = safehttpget("https://raw.githubusercontent.com/aibabylaugh/catsaken/refs/heads/main/translations.lua", true)
+        if translations then translations = loadstring(translations)() else Unloaded = true; return errorcore("Translations failed to load") end
+    end
+    warn("translations init")
+    repeat wait() until LOADSTEP3
+    warn("icons init")
+end, function(err)
+    warn('load error:\n', tostring(err))
+    errorcore("loader errored - this should NOT happen")
+end)
